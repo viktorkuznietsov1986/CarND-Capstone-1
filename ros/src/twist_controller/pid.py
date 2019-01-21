@@ -32,3 +32,6 @@ class PID(object):
         self.last_error = error
 
         return val
+   
+    def error(self):
+	return self.int_val
