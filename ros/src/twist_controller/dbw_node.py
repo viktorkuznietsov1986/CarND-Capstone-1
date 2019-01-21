@@ -7,6 +7,7 @@ from geometry_msgs.msg import TwistStamped
 import math
 
 from twist_controller import Controller
+from lowpass import LowPassFilter
 
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
@@ -52,27 +53,80 @@ class DBWNode(object):
                                             ThrottleCmd, queue_size=1)
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',
                                          BrakeCmd, queue_size=1)
-
+	min_speed = 00. #not sure what this is supposed to be for, but the controller needs it
         # TODO: Create `Controller` object
-        # self.controller = Controller(<Arguments you wish to provide>)
+        self.controller = Controller(wheel_base, steer_ratio, max_lat_accel, max_steer_angle)
 
         # TODO: Subscribe to all the topics you need to
+  	rospy.Subscriber('/twist_cmd',TwistStamped,self.twist_cb)
+	rospy.Subscriber('/current_velocity',TwistStamped,self.curr_velo_cb)
+	#rospy.Subscriber('/vehicle/dbw_enabled',...) there is no such task - needs to be created?
+	self.twist = None 
+	self.curr_velo = None
+	self.low_pass = LowPassFilter(0.5,0.02) 
+	self.loop(vehicle_mass,wheel_radius)
 
-        self.loop()
-
-    def loop(self):
+    def loop(self, vehicle_mass, wheel_radius):
         rate = rospy.Rate(50) # 50Hz
+	error = 0 #to determine best values for pid control parameters...
         while not rospy.is_shutdown():
             # TODO: Get predicted throttle, brake, and steering using `twist_controller`
             # You should only publish the control commands if dbw is enabled
-            # throttle, brake, steering = self.controller.control(<proposed linear velocity>,
+
+	    
+	    sample_time = 1./50 # because of the 50Hz; 
+            
+	    if self.twist and self.curr_velo:
+		curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
+		#curr_velocity = self.low_pass.filt(curr_velocity)
+		linear_vel = self.abs_vec3(self.twist.twist.linear)
+		abs_angular_vel = self.abs_vec3(self.twist.twist.angular)
+		sign = 1
+		if abs_angular_vel >0:
+		    sign = self.dir()
+		    #angular_vel = self.dir(self.twist.twist.linear,self.twist.twist.angular) * abs_angular_vel
+	    	throttle, brake, steering, error = self.controller.control(self.abs_vec3(self.twist.twist.linear), 
+								sign*self.abs_vec3(self.twist.twist.angular), 
+								curr_velocity,
+								 sample_time,vehicle_mass, wheel_radius) 
             #                                                     <proposed angular velocity>,
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
             # if <dbw is enabled>:
-            #   self.publish(throttle, brake, steer)
-            rate.sleep()
+#		throttle = self.low_pass.filt(throttle)
+		
+            	self.publish(throttle, brake, steering)
+            	rate.sleep()
+	rospy.logerr(error)
+    def twist_cb(self,msg):
+	self.twist = msg 
+
+    def abs_vec3(self,vec):
+	return math.sqrt(vec.x**2+vec.y**2+vec.z**2)
+
+    def dir(self):
+	#projection of angular velocity on x-y-plane and then turning the vector
+	#by 90 degrees to use the scalar product with linear_vel to determine 
+	#the direction of the angular velocity 
+	scalar = -self.twist.twist.linear.x*self.twist.twist.angular.z+self.twist.twist.linear.z*self.twist.twist.angular.x
+	#scalar = linear_vel.x*angular_vel.x + linear_vel.y*angular_vel.y
+	if scalar >0:
+	    return -1
+	if scalar <0:
+	    return 1
+	else:
+	    rospy.logerr('Scalar product is zero')
+	    rospy.logerr(self.twist.twist.linear.x)
+	    rospy.logerr(self.twist.twist.linear.y)
+	    rospy.logerr(self.twist.twist.angular.x)
+	    rospy.logerr(self.twist.twist.angular.y)
+	    rospy.logerr(self.twist.twist.angular.z)
+	    return 0
+
+    def curr_velo_cb(self,msg):
+	self.curr_velo= msg
+
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
