@@ -53,17 +53,19 @@ class DBWNode(object):
                                             ThrottleCmd, queue_size=1)
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',
                                          BrakeCmd, queue_size=1)
-	min_speed = 00. #not sure what this is supposed to be for, but the controller needs it
+	
         # TODO: Create `Controller` object
         self.controller = Controller(wheel_base, steer_ratio, max_lat_accel, max_steer_angle)
-
+	
+	self.dbw_enabled = None
         # TODO: Subscribe to all the topics you need to
   	rospy.Subscriber('/twist_cmd',TwistStamped,self.twist_cb)
 	rospy.Subscriber('/current_velocity',TwistStamped,self.curr_velo_cb)
-	#rospy.Subscriber('/vehicle/dbw_enabled',...) there is no such task - needs to be created?
+	rospy.Subscriber('/vehicle/dbw_enabled',Bool, self.dbw_enabled_cb) 
+	
 	self.twist = None 
 	self.curr_velo = None
-	self.low_pass = LowPassFilter(0.5,0.02) 
+	#self.low_pass = LowPassFilter(0.5,0.02) 
 	self.loop(vehicle_mass,wheel_radius)
 
     def loop(self, vehicle_mass, wheel_radius):
@@ -76,7 +78,7 @@ class DBWNode(object):
 	    
 	    sample_time = 1./50 # because of the 50Hz; 
             
-	    if self.twist and self.curr_velo:
+	    if self.twist and self.curr_velo and self.dbw_enabled:
 		curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
 		#curr_velocity = self.low_pass.filt(curr_velocity)
 		linear_vel = self.abs_vec3(self.twist.twist.linear)
@@ -105,6 +107,8 @@ class DBWNode(object):
     def abs_vec3(self,vec):
 	return math.sqrt(vec.x**2+vec.y**2+vec.z**2)
 
+    def dbw_enabled_cb(self,msg):
+	self.dbw_enabled = msg
     def dir(self):
 	#projection of angular velocity on x-y-plane and then turning the vector
 	#by 90 degrees to use the scalar product with linear_vel to determine 
