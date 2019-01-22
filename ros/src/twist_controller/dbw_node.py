@@ -57,12 +57,13 @@ class DBWNode(object):
         # TODO: Create `Controller` object
         self.controller = Controller(wheel_base, steer_ratio, max_lat_accel, max_steer_angle)
 	
-	self.dbw_enabled = None
+	
         # TODO: Subscribe to all the topics you need to
   	rospy.Subscriber('/twist_cmd',TwistStamped,self.twist_cb)
 	rospy.Subscriber('/current_velocity',TwistStamped,self.curr_velo_cb)
 	rospy.Subscriber('/vehicle/dbw_enabled',Bool, self.dbw_enabled_cb) 
 	
+        self.dbw_enabled = None
 	self.twist = None 
 	self.curr_velo = None
 	#self.low_pass = LowPassFilter(0.5,0.02) 
@@ -75,21 +76,22 @@ class DBWNode(object):
             # TODO: Get predicted throttle, brake, and steering using `twist_controller`
             # You should only publish the control commands if dbw is enabled
 
-	    
 	    sample_time = 1./50 # because of the 50Hz; 
             
 	    if self.twist and self.curr_velo and self.dbw_enabled:
-		curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
+		#curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
+		curr_velocity = self.curr_velo.twist.linear.x 
 		#curr_velocity = self.low_pass.filt(curr_velocity)
-		linear_vel = self.abs_vec3(self.twist.twist.linear)
-		abs_angular_vel = self.abs_vec3(self.twist.twist.angular)
-		sign = 1
-		if abs_angular_vel >0:
-		    sign = self.dir()
-		    #angular_vel = self.dir(self.twist.twist.linear,self.twist.twist.angular) * abs_angular_vel
-	    	throttle, brake, steering, error = self.controller.control(self.abs_vec3(self.twist.twist.linear), 
-								sign*self.abs_vec3(self.twist.twist.angular), 
-								curr_velocity,
+		linear_vel = self.twist.twist.linear.x
+		#linear_vel = self.abs_vec3(self.twist.twist.linear) #linear velocity seems to be in car coordinates so linear.x
+		#should be the same
+		angular_vel = self.twist.twist.angular.z
+		#abs_angular_vel = self.abs_vec3(self.twist.twist.angular) #angular vel seems to be only in z-direction...; 
+		#then all the stuff with sign is unneccessary
+		#sign = 1 #the direction of the angular velocity must be taken into regard aswell 
+		#if abs_angular_vel >0:
+		#    sign = self.dir()
+	    	throttle, brake, steering, error = self.controller.control(linear_vel,angular_vel,curr_velocity,
 								 sample_time,vehicle_mass, wheel_radius) 
             #                                                     <proposed angular velocity>,
             #                                                     <current linear velocity>,
@@ -120,12 +122,6 @@ class DBWNode(object):
 	if scalar <0:
 	    return 1
 	else:
-	    rospy.logerr('Scalar product is zero')
-	    rospy.logerr(self.twist.twist.linear.x)
-	    rospy.logerr(self.twist.twist.linear.y)
-	    rospy.logerr(self.twist.twist.angular.x)
-	    rospy.logerr(self.twist.twist.angular.y)
-	    rospy.logerr(self.twist.twist.angular.z)
 	    return 0
 
     def curr_velo_cb(self,msg):
