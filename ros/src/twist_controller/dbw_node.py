@@ -55,7 +55,7 @@ class DBWNode(object):
                                          BrakeCmd, queue_size=1)
 	
         # TODO: Create `Controller` object
-        self.controller = Controller(wheel_base, steer_ratio, max_lat_accel, max_steer_angle)
+        self.controller = Controller(wheel_base, steer_ratio, max_lat_accel, max_steer_angle,accel_limit,decel_limit)
 	
 	
         # TODO: Subscribe to all the topics you need to
@@ -63,10 +63,10 @@ class DBWNode(object):
 	rospy.Subscriber('/current_velocity',TwistStamped,self.curr_velo_cb)
 	rospy.Subscriber('/vehicle/dbw_enabled',Bool, self.dbw_enabled_cb) 
 	
-        self.dbw_enabled = None
+        self.dbw_enabled = False
 	self.twist = None 
 	self.curr_velo = None
-	#self.low_pass = LowPassFilter(0.5,0.02) 
+	self.low_pass = LowPassFilter(0.5,0.02) 
 	self.loop(vehicle_mass,wheel_radius)
 
     def loop(self, vehicle_mass, wheel_radius):
@@ -78,10 +78,10 @@ class DBWNode(object):
 
 	    sample_time = 1./50 # because of the 50Hz; 
             
-	    if self.twist and self.curr_velo and self.dbw_enabled:
+	    if self.twist and self.curr_velo and self.dbw_enabled :
 		#curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
 		curr_velocity = self.curr_velo.twist.linear.x 
-		#curr_velocity = self.low_pass.filt(curr_velocity)
+		curr_velocity = self.low_pass.filt(curr_velocity)
 		linear_vel = self.twist.twist.linear.x
 		#linear_vel = self.abs_vec3(self.twist.twist.linear) #linear velocity seems to be in car coordinates so linear.x
 		#should be the same
@@ -91,17 +91,17 @@ class DBWNode(object):
 		#sign = 1 #the direction of the angular velocity must be taken into regard aswell 
 		#if abs_angular_vel >0:
 		#    sign = self.dir()
+		#angular_vel = sign*abs_angular_vel
 	    	throttle, brake, steering, error = self.controller.control(linear_vel,angular_vel,curr_velocity,
-								 sample_time,vehicle_mass, wheel_radius) 
+								 sample_time,vehicle_mass, wheel_radius,self.dbw_enabled) 
             #                                                     <proposed angular velocity>,
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
-            # if <dbw is enabled>:
-#		throttle = self.low_pass.filt(throttle)
+            #		
 		
             	self.publish(throttle, brake, steering)
-            	rate.sleep()
+            rate.sleep()
 	rospy.logerr(error)
     def twist_cb(self,msg):
 	self.twist = msg 

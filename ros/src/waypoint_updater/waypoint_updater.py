@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from std_msgs.msg import Int32
 from scipy.spatial import KDTree
 import numpy as np
 import math
@@ -31,29 +32,48 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-
+	rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb) 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
-	#rospy.loginfo("INIIIIIIIIIIIIIIIIIIIT")
+
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
         # TODO: Add other member variables you need below
 	self.base_waypoints = None
+	self.max_vel= None
 	self.pose  = None
 	self.waypoints_2d = None
 	self.kd_tree = None
-#        rospy.spin()
+	self.red_light_waypoint = None
+	self.num_waypoints = None			
+	check = True
 	rate = rospy.Rate(50)
 	while not rospy.is_shutdown():
-	    #if not self.kd_tree:
-	#	rospy.loginfo("Nooooooooooooooooooooo tree")
+
 	    if self.base_waypoints and self.pose and self.kd_tree:
-	 #       rospy.loginfo("set")
-	        self.set_final_waypoints()
-	  #  if not self.base_waypoints:
-	   #     rospy.loginfo("NOOOOOOOOOOOOOO waypoints")
-	   # if not self.pose:
-	    #    rospy.loginfo("NOOOOOOOOOOOOOOOO pose")
+#		num_waypoints = len(self.base_waypoints.waypoints)
+#	        self.set_final_waypoints()
+		#if check:
+		#    check = False
+		#    self.red_light_waypoint = self.find_waypoint_ahead()+100
+		if self.red_light_waypoint and not self.red_light_waypoint==-1 :
+		    self.decrease_vel(self.red_light_waypoint)
+		    rospy.logerr(self.red_light_waypoint)
+		if self.red_light_waypoint ==-1:
+		    self.set_max_speed(self.max_vel)
+		self.set_final_waypoints()
+
+		#for i in range(len(self.base_waypoints.waypoints)):
+	        #    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,10.)
+
+#		if self.red_light_waypoint:
+#		    
+#		    for i in range(30):
+#			self.set_waypoint_velocity(self.base_waypoints.waypoints,(self.red_light_waypoint-i)%num_waypoints,0)
+#		    for i in range(30,num_waypoints):
+#			curr_waypoint = (self.red_light_waypoint-i)%num_waypoints
+#			self.set_waypoint_velocity(self.base_waypoints.waypoints,curr_waypoint,10.) 
+	
 	    rate.sleep()
 
     def pose_cb(self, msg):
@@ -66,6 +86,9 @@ class WaypointUpdater(object):
         # TODO: Implement
 	#rospy.loginfo("waypoints_cb")
         self.base_waypoints = waypoints
+	self.max_vel = waypoints.waypoints[0].twist.twist.linear.x #maximal velocity is set in waypoint_loader.py and is the
+	#same for all waypoints so just take index 0...
+	self.num_waypoints = len(waypoints.waypoints)
 	if not self.waypoints_2d:
 	    self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]
 	   # rospy.loginfo(len(self.waypoints_2d))
@@ -91,9 +114,19 @@ class WaypointUpdater(object):
 	lane.waypoints = self.base_waypoints.waypoints[ind:ind+LOOKAHEAD_WPS]
 	self.final_waypoints_pub.publish(lane)
 
+    def set_max_speed(self,max_speed):
+	for i in range(self.num_waypoints):
+	    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,max_speed)
+
+    def decrease_vel(self,red_light_wp): #perhaps additional parameter curr_velocity to adjust the number of waypoints 
+	# for the decceleration
+	vel = self.max_vel# self.get_waypoint_velocity(self.base_waypoints.waypoints[(red_light_wp+10)%self.num_waypoints])
+	for i in range(30):
+	    self.set_waypoint_velocity(self.base_waypoints.waypoints,(self.red_light_waypoint-i)%self.num_waypoints,i/30*vel)
+
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
-	pass
+	self.red_light_waypoint = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

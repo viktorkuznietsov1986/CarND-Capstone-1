@@ -34,4 +34,4 @@ class PID(object):
         return val
    
     def error(self):
-	return self.int_val
+	return abs(self.int_val)
