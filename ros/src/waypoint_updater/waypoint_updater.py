@@ -52,16 +52,16 @@ class WaypointUpdater(object):
 
 	    if self.base_waypoints and self.pose and self.kd_tree:
 #		num_waypoints = len(self.base_waypoints.waypoints)
-#	        self.set_final_waypoints()
+	        self.set_final_waypoints()
 		#if check:
 		#    check = False
 		#    self.red_light_waypoint = self.find_waypoint_ahead()+100
-		if self.red_light_waypoint and not self.red_light_waypoint==-1 :
-		    self.decrease_vel(self.red_light_waypoint)
-		    rospy.logerr(self.red_light_waypoint)
-		if self.red_light_waypoint ==-1:
-		    self.set_max_speed(self.max_vel)
-		self.set_final_waypoints()
+#		if self.red_light_waypoint and not self.red_light_waypoint==-1 :
+#		    self.decrease_vel(self.red_light_waypoint)
+#		    rospy.logerr(self.red_light_waypoint)
+##		if self.red_light_waypoint ==-1:
+#		    self.set_max_speed(self.max_vel)
+#		self.set_final_waypoints()
 
 		#for i in range(len(self.base_waypoints.waypoints)):
 	        #    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,10.)
@@ -86,7 +86,8 @@ class WaypointUpdater(object):
         # TODO: Implement
 	#rospy.loginfo("waypoints_cb")
         self.base_waypoints = waypoints
-	self.max_vel = waypoints.waypoints[0].twist.twist.linear.x #maximal velocity is set in waypoint_loader.py and is the
+	if not self.max_vel:
+	    self.max_vel = self.get_waypoint_velocity(self.base_waypoints.waypoints[100]) #waypoints.waypoints[10].twist.twist.linear.x #maximal velocity is set in waypoint_loader.py and is the
 	#same for all waypoints so just take index 0...
 	self.num_waypoints = len(waypoints.waypoints)
 	if not self.waypoints_2d:
@@ -107,26 +108,56 @@ class WaypointUpdater(object):
 	return ind
 
     def set_final_waypoints(self):
-	ind  = self.find_waypoint_ahead()
+#	ind  = self.find_waypoint_ahead()
 	#final_waypoints_pub = self.base_waypoints[ind:ind+LOOKAHEAD_WPS]
-	lane = Lane()
-	lane.header = self.base_waypoints.header
-	lane.waypoints = self.base_waypoints.waypoints[ind:ind+LOOKAHEAD_WPS]
+	lane = self.new_lane()
+	#lane.header = self.base_waypoints.header
+	#lane.waypoints = self.base_waypoints.waypoints[ind:ind+LOOKAHEAD_WPS]
 	self.final_waypoints_pub.publish(lane)
 
-    def set_max_speed(self,max_speed):
-	for i in range(self.num_waypoints):
-	    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,max_speed)
+#    def set_max_speed(self,max_speed):
+#	for i in range(self.num_waypoints):
+#	    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,max_speed)
 
-    def decrease_vel(self,red_light_wp): #perhaps additional parameter curr_velocity to adjust the number of waypoints 
-	# for the decceleration
-	vel = self.max_vel# self.get_waypoint_velocity(self.base_waypoints.waypoints[(red_light_wp+10)%self.num_waypoints])
-	for i in range(30):
-	    self.set_waypoint_velocity(self.base_waypoints.waypoints,(self.red_light_waypoint-i)%self.num_waypoints,i/30*vel)
+    def new_lane(self):
+	lane = Lane()
+	next_idx = self.find_waypoint_ahead()
+	final_idx = next_idx + LOOKAHEAD_WPS
+	
+	base_waypoints = self.base_waypoints.waypoints[next_idx:final_idx+1]
+	if self.red_light_waypoint ==-1 or (self.red_light_waypoint >final_idx):
+	    lane.waypoints = base_waypoints
+	else:
+	    lane.waypoints = self.decrease_vel(base_waypoints,next_idx)
+	return lane
+
+    def decrease_vel(self,lane_waypoints,next_idx): 
+	vel = self.max_vel # self.get_waypoint_velocity(self.base_waypoints.waypoints[(red_light_wp+10)%self.num_waypoints])
+	waypoints = []
+	stop_idx = max(self.red_light_waypoint-next_idx,0)
+	for i in range(LOOKAHEAD_WPS):
+	    wp = Waypoint()
+	    wp.pose = self.base_waypoints.waypoints[next_idx + i].pose
+	    
+	    dist = self.distance(lane_waypoints,i,stop_idx) #min(self.red_light_waypoint-(next_idx +i),0)
+	    vel = max(math.sqrt( 2* dist),self.max_vel)
+	    if dist >= 0:
+	    	target_vel = min(vel * (dist/30.),vel)
+	    if dist < 0:
+		target_vel = min(vel* (-dist/30.),vel) 
+	    if target_vel <1:
+		target_vel =0
+	    wp.twist.twist.linear.x =vel 
+	    waypoints.append(wp)
+	return waypoints
+
+
+
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
 	self.red_light_waypoint = msg.data
+	#self.red_light_waypoint = 20
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

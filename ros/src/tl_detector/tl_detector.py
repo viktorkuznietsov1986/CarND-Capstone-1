@@ -129,6 +129,12 @@ class TLDetector(object):
  	#    return min_ind
 	return ind
 
+    def get_closest_waypoint(self,x,y):
+	ind = -1
+	if self.kdTree:
+	    ind = self.kdTree.query([x,y],1)[1]
+	return ind
+
 #    def dist(self,pos1,pos2):
 #	return math.sqrt((pos1.x-pos2.x)**2+(pos1.y-pos2.y)**2) #-waypoint.pose.pose.position.x)**2 + (pose.position.y-waypoint.pose.pose.position.y)**2)  
     
@@ -157,7 +163,7 @@ class TLDetector(object):
             location and color
 
         Returns:
-            int: index of waypoint closes to the upcoming stop line for a traffic light (-1 if none exists)
+            int: index of waypoint closest to the upcoming stop line for a traffic light (-1 if none exists)
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
@@ -167,17 +173,18 @@ class TLDetector(object):
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
         if(self.pose and self.waypoints):
-            car_position = self.get_closest_waypoint([self.pose.pose.position.x,self.pose.pose.position.y])
+            car_position = self.get_closest_waypoint(self.pose.pose.position.x,self.pose.pose.position.y)
+#	    car_position = self.get_closest_waypoint([self.pose.pose.position.x,self.pose.pose.position.y])
 	    #rospy.logerr("pose and waypoints")
         #TODO find the closest visible traffic light (if one exists)
 	    min_dist = len(self.waypoints.waypoints)
 	 #   min_idx =  
 #	    rospy.logerr(len(self.lights))
 	    for i in range(len(stop_line_positions)):
-	        line_pos = self.get_closest_waypoint(stop_line_positions[i])
-	        curr_dist = (line_pos - car_position) % len(self.waypoints.waypoints)
+	        line_pos = self.get_closest_waypoint(stop_line_positions[i][0],stop_line_positions[i][1])
+	        curr_dist = (line_pos - car_position) %len(self.waypoints.waypoints)
 	        if curr_dist < min_dist:
-		    #rospy.logerr("update")
+		    rospy.logerr(curr_dist)
 		    min_dist = curr_dist
 		    min_idx = i
 		    check = True
@@ -186,7 +193,7 @@ class TLDetector(object):
 	   # rospy.logerr("state")
             state = self.get_light_state(self.lights[min_idx])
 	    #rospy.logerr(state)
-            return self.get_closest_waypoint(stop_line_positions[min_idx]), state
+            return self.get_closest_waypoint(stop_line_positions[min_idx][0],stop_line_positions[min_idx][1]), state
         #self.waypoints = None
 	#colour = self.lights[min_idx] # right way to get the colour?
         return -1, TrafficLight.UNKNOWN
