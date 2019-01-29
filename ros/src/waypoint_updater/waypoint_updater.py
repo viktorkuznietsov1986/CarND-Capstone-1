@@ -23,7 +23,7 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 20 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 40 # Number of waypoints we will publish. You can change this number
 
 
 class WaypointUpdater(object):
@@ -114,7 +114,9 @@ class WaypointUpdater(object):
 	#lane.header = self.base_waypoints.header
 	#lane.waypoints = self.base_waypoints.waypoints[ind:ind+LOOKAHEAD_WPS]
 	self.final_waypoints_pub.publish(lane)
-
+	rospy.logerr("Waypoint velocities:")
+	for i in range(len(lane.waypoints)):
+	    rospy.logerr(lane.waypoints[i].twist.twist.linear.x)
 #    def set_max_speed(self,max_speed):
 #	for i in range(self.num_waypoints):
 #	    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,max_speed)
@@ -123,9 +125,12 @@ class WaypointUpdater(object):
 	lane = Lane()
 	next_idx = self.find_waypoint_ahead()
 	final_idx = next_idx + LOOKAHEAD_WPS
-	
+ 	rospy.logerr("next:")
+	rospy.logerr(next_idx)
+	rospy.logerr("final:")
+	rospy.logerr(final_idx)
 	base_waypoints = self.base_waypoints.waypoints[next_idx:final_idx+1]
-	if self.red_light_waypoint ==-1 or (self.red_light_waypoint >final_idx):
+	if self.red_light_waypoint ==-1 or (self.red_light_waypoint >final_idx) or not self.red_light_waypoint:
 	    lane.waypoints = base_waypoints
 	else:
 	    lane.waypoints = self.decrease_vel(base_waypoints,next_idx)
@@ -134,13 +139,15 @@ class WaypointUpdater(object):
     def decrease_vel(self,lane_waypoints,next_idx): 
 	vel = self.max_vel # self.get_waypoint_velocity(self.base_waypoints.waypoints[(red_light_wp+10)%self.num_waypoints])
 	waypoints = []
-	stop_idx = max(self.red_light_waypoint-next_idx,0)
+	stop_idx = max(self.red_light_waypoint-next_idx-5,0)
 	for i in range(LOOKAHEAD_WPS):
 	    wp = Waypoint()
 	    wp.pose = self.base_waypoints.waypoints[next_idx + i].pose
-	    
+	    rospy.logerr(i)
 	    dist = self.distance(lane_waypoints,i,stop_idx) #min(self.red_light_waypoint-(next_idx +i),0)
-	    vel = max(math.sqrt( 2* dist),self.max_vel)
+	    rospy.logerr(dist)
+	    vel = min(math.sqrt( 2* dist),self.max_vel)
+	    rospy.logerr(vel)
 	    if dist >= 0:
 	    	target_vel = min(vel * (dist/30.),vel)
 	    if dist < 0:
