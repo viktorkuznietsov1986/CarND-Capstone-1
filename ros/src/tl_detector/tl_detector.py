@@ -52,11 +52,6 @@ class TLDetector(object):
         self.last_wp = -1
 	self.count = 0
         self.state_count = 0
-	rate = rospy.Rate(10)
-#	while not rospy.is_shutdown():
-#	    if self.pose and self.waypoints:
-#	    	self.process_traffic_lights()
-#	    rate.sleep()
 
         rospy.spin()
 
@@ -80,18 +75,15 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-#	self.count+=1
-#	self.count %=10
-#	if self.count == 0:
+
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
 	if self.state != state:
             self.state_count = 0
             self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
+        elif self.state_count >= STATE_COUNT_THRESHOLD:#use a threshold to avoid influence of noise
             self.last_state = self.state
-            #rospy.logerr(light_wp)
             light_wp = light_wp if state ==0 else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
@@ -107,32 +99,7 @@ class TLDetector(object):
         """
 
 
-    def get_closest_waypoint(self, pose):
-        """Identifies the closest path waypoint to the given position
-            https://en.wikipedia.org/wiki/Closest_pair_of_points_problem
-        Args:
-            pose (Pose): position to match a waypoint to
 
-        Returns:
-            int: index of the closest waypoint in self.waypoints
-
-        """
-#	if self.waypoints:
-        #TODO implement
-	# as in waypoint_updater.py:
-#	    min_ind = 0
-#	    min_dist = self.dist(pose.position,self.waypoints.waypoints[0].pose.pose.position)
-	ind = -1
-	if self.kdTree:
-	    _,ind = self.kdTree.query([pose[0], pose[1]],1)
- #           for i in range(len(self.waypoints.waypoints)):
-#	        curr_dist = self.dist(pose.position,self.waypoints.waypoints[i].pose.pose.position)
-#	        if curr_dist <min_dist:
-#		    min_ind = i
-#		    min_dist = curr_dist
-#
- 	#    return min_ind
-	return ind
 
     def get_closest_waypoint(self,x,y):
 	ind = -1
@@ -140,8 +107,7 @@ class TLDetector(object):
 	    ind = self.kdTree.query([x,y],1)[1]
 	return ind
 
-#    def dist(self,pos1,pos2):
-#	return math.sqrt((pos1.x-pos2.x)**2+(pos1.y-pos2.y)**2) #-waypoint.pose.pose.position.x)**2 + (pose.position.y-waypoint.pose.pose.position.y)**2)  
+
     
     def get_light_state(self, light):
         """Determines the current color of the traffic light
@@ -179,28 +145,21 @@ class TLDetector(object):
         stop_line_positions = self.config['stop_line_positions']
         if(self.pose and self.waypoints):
             car_position = self.get_closest_waypoint(self.pose.pose.position.x,self.pose.pose.position.y)
-#	    car_position = self.get_closest_waypoint([self.pose.pose.position.x,self.pose.pose.position.y])
-	    #rospy.logerr("pose and waypoints")
-        #TODO find the closest visible traffic light (if one exists)
+        # find the closest visible traffic light (if one exists)
 	    min_dist = len(self.waypoints.waypoints)
-	 #   min_idx =  
-#	    rospy.logerr(len(self.lights))
+
 	    for i in range(len(stop_line_positions)):
 	        line_pos = self.get_closest_waypoint(stop_line_positions[i][0],stop_line_positions[i][1])
 	        curr_dist = (line_pos - car_position) %len(self.waypoints.waypoints)
 	        if curr_dist < min_dist:
-		    #rospy.logerr(curr_dist)
 		    min_dist = curr_dist
 		    min_idx = i
-		    check = True
+		    check = True 
 	    
-        if check: #min_idx:
-	   # rospy.logerr("state")
+        if check: 
             state = self.get_light_state(self.lights[min_idx])
-	    #rospy.logerr(state)
             return self.get_closest_waypoint(stop_line_positions[min_idx][0],stop_line_positions[min_idx][1]), state
-        #self.waypoints = None
-	#colour = self.lights[min_idx] # right way to get the colour?
+        
         return -1, TrafficLight.UNKNOWN
 
 if __name__ == '__main__':

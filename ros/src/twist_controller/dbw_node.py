@@ -71,7 +71,7 @@ class DBWNode(object):
 
     def loop(self, vehicle_mass, wheel_radius):
         rate = rospy.Rate(50) # 50Hz
-	error = 0 #to determine best values for pid control parameters...
+	#error = 0 #to determine best values for pid control parameters...
         while not rospy.is_shutdown():
             # TODO: Get predicted throttle, brake, and steering using `twist_controller`
             # You should only publish the control commands if dbw is enabled
@@ -79,30 +79,18 @@ class DBWNode(object):
 	    sample_time = 1./50 # because of the 50Hz; 
             
 	    if self.twist and self.curr_velo and self.dbw_enabled :
-		#curr_velocity = self.abs_vec3(self.curr_velo.twist.linear)
 		curr_velocity = self.curr_velo.twist.linear.x 
 		curr_velocity = self.low_pass.filt(curr_velocity)
 		linear_vel = self.twist.twist.linear.x
-		#linear_vel = self.abs_vec3(self.twist.twist.linear) #linear velocity seems to be in car coordinates so linear.x
-		#should be the same
 		angular_vel = self.twist.twist.angular.z
-		#abs_angular_vel = self.abs_vec3(self.twist.twist.angular) #angular vel seems to be only in z-direction...; 
-		#then all the stuff with sign is unneccessary
-		#sign = 1 #the direction of the angular velocity must be taken into regard aswell 
-		#if abs_angular_vel >0:
-		#    sign = self.dir()
-		#angular_vel = sign*abs_angular_vel
-	    	throttle, brake, steering, error = self.controller.control(linear_vel,angular_vel,curr_velocity,
+		
+	    	throttle, brake, steering = self.controller.control(linear_vel,angular_vel,curr_velocity,
 								 sample_time,vehicle_mass, wheel_radius,self.dbw_enabled) 
-            #                                                     <proposed angular velocity>,
-            #                                                     <current linear velocity>,
-            #                                                     <dbw status>,
-            #                                                     <any other argument you need>)
-            #		
+            
 		
             	self.publish(throttle, brake, steering)
             rate.sleep()
-	rospy.logerr(error)
+	#rospy.logerr(error)
     def twist_cb(self,msg):
 	self.twist = msg 
 
@@ -111,18 +99,6 @@ class DBWNode(object):
 
     def dbw_enabled_cb(self,msg):
 	self.dbw_enabled = msg
-    def dir(self):
-	#projection of angular velocity on x-y-plane and then turning the vector
-	#by 90 degrees to use the scalar product with linear_vel to determine 
-	#the direction of the angular velocity 
-	scalar = -self.twist.twist.linear.x*self.twist.twist.angular.z+self.twist.twist.linear.z*self.twist.twist.angular.x
-	#scalar = linear_vel.x*angular_vel.x + linear_vel.y*angular_vel.y
-	if scalar >0:
-	    return -1
-	if scalar <0:
-	    return 1
-	else:
-	    return 0
 
     def curr_velo_cb(self,msg):
 	self.curr_velo= msg
