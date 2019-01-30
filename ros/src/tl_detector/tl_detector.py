@@ -50,8 +50,9 @@ class TLDetector(object):
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
+	self.count = 0
         self.state_count = 0
-	rate = rospy.Rate(50)
+	rate = rospy.Rate(10)
 #	while not rospy.is_shutdown():
 #	    if self.pose and self.waypoints:
 #	    	self.process_traffic_lights()
@@ -79,28 +80,32 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
+#	self.count+=1
+#	self.count %=10
+#	if self.count == 0:
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
-
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
-        if self.state != state:
+	if self.state != state:
             self.state_count = 0
             self.state = state
         elif self.state_count >= STATE_COUNT_THRESHOLD:
             self.last_state = self.state
-	    #rospy.logerr(light_wp)
+            #rospy.logerr(light_wp)
             light_wp = light_wp if state ==0 else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
+
+        """
+        Publish upcoming red lights at camera frequency.
+        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+        of times till we start using it. Otherwise the previous stable state is
+        used.
+        """
+
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -184,7 +189,7 @@ class TLDetector(object):
 	        line_pos = self.get_closest_waypoint(stop_line_positions[i][0],stop_line_positions[i][1])
 	        curr_dist = (line_pos - car_position) %len(self.waypoints.waypoints)
 	        if curr_dist < min_dist:
-		    rospy.logerr(curr_dist)
+		    #rospy.logerr(curr_dist)
 		    min_dist = curr_dist
 		    min_idx = i
 		    check = True

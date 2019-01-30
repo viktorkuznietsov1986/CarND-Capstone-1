@@ -18,7 +18,7 @@ class Controller(object):
 	self.ki = 0.6
 	self.kd = 0.1
 	self.mn = decel_limit
-	self.mx = accel_limit
+	self.mx = 0.3
 	self.pid = PID(self.kp,self.ki,self.kd ,self.mn,self.mx)
 	self.accel =None
 	

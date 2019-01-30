@@ -23,8 +23,8 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 40 # Number of waypoints we will publish. You can change this number
-
+LOOKAHEAD_WPS = 31 # Number of waypoints we will publish. You can change this number
+MAX_DECEl = 0.5
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -44,10 +44,10 @@ class WaypointUpdater(object):
 	self.pose  = None
 	self.waypoints_2d = None
 	self.kd_tree = None
-	self.red_light_waypoint = None
+	self.red_light_waypoint = -1
 	self.num_waypoints = None			
 	check = True
-	rate = rospy.Rate(50)
+	rate = rospy.Rate(10)
 	while not rospy.is_shutdown():
 
 	    if self.base_waypoints and self.pose and self.kd_tree:
@@ -104,7 +104,7 @@ class WaypointUpdater(object):
 	heading_direction = np.array([self.pose.pose.orientation.x, self.pose.pose.orientation.y])
 	if np.dot(direction_waypoint,heading_direction)<0:
            ind +=1 #perhaps mod total number of waypoints
-	   ind %=len(self.waypoints_2d)
+	   ind = ind%len(self.waypoints_2d)
 	return ind
 
     def set_final_waypoints(self):
@@ -114,9 +114,9 @@ class WaypointUpdater(object):
 	#lane.header = self.base_waypoints.header
 	#lane.waypoints = self.base_waypoints.waypoints[ind:ind+LOOKAHEAD_WPS]
 	self.final_waypoints_pub.publish(lane)
-	rospy.logerr("Waypoint velocities:")
-	for i in range(len(lane.waypoints)):
-	    rospy.logerr(lane.waypoints[i].twist.twist.linear.x)
+#	rospy.logerr("Waypoint velocities:")
+#	for i in range(len(lane.waypoints)):
+#	    rospy.logerr(lane.waypoints[i].twist.twist.linear.x)
 #    def set_max_speed(self,max_speed):
 #	for i in range(self.num_waypoints):
 #	    self.set_waypoint_velocity(self.base_waypoints.waypoints,i,max_speed)
@@ -125,12 +125,12 @@ class WaypointUpdater(object):
 	lane = Lane()
 	next_idx = self.find_waypoint_ahead()
 	final_idx = next_idx + LOOKAHEAD_WPS
- 	rospy.logerr("next:")
-	rospy.logerr(next_idx)
-	rospy.logerr("final:")
-	rospy.logerr(final_idx)
+# 	rospy.logerr("next:")
+#	rospy.logerr(next_idx)
+#	rospy.logerr("final:")
+#	rospy.logerr(final_idx)
 	base_waypoints = self.base_waypoints.waypoints[next_idx:final_idx+1]
-	if self.red_light_waypoint ==-1 or (self.red_light_waypoint >final_idx) or not self.red_light_waypoint:
+	if self.red_light_waypoint ==-1 or (self.red_light_waypoint >final_idx) or self.red_light_waypoint <next_idx:
 	    lane.waypoints = base_waypoints
 	else:
 	    lane.waypoints = self.decrease_vel(base_waypoints,next_idx)
@@ -139,21 +139,22 @@ class WaypointUpdater(object):
     def decrease_vel(self,lane_waypoints,next_idx): 
 	vel = self.max_vel # self.get_waypoint_velocity(self.base_waypoints.waypoints[(red_light_wp+10)%self.num_waypoints])
 	waypoints = []
-	stop_idx = max(self.red_light_waypoint-next_idx-5,0)
+	stop_idx = max(self.red_light_waypoint-next_idx-2,0)
 	for i in range(LOOKAHEAD_WPS):
 	    wp = Waypoint()
 	    wp.pose = self.base_waypoints.waypoints[next_idx + i].pose
-	    rospy.logerr(i)
-	    dist = self.distance(lane_waypoints,i,stop_idx) #min(self.red_light_waypoint-(next_idx +i),0)
-	    rospy.logerr(dist)
-	    vel = min(math.sqrt( 2* dist),self.max_vel)
-	    rospy.logerr(vel)
-	    if dist >= 0:
-	    	target_vel = min(vel * (dist/30.),vel)
-	    if dist < 0:
-		target_vel = min(vel* (-dist/30.),vel) 
-	    if target_vel <1:
-		target_vel =0
+#	    rospy.logerr(i)
+	    dist = self.distance(lane_waypoints,i,stop_idx) 
+	    #dist = max(stop_idx-i,0)
+#	    rospy.logerr(dist)
+	    vel = min(math.sqrt( 2*MAX_DECEl* dist),self.max_vel)
+	    #rospy.logerr(vel)
+	    #if dist >= 0:
+	    #	target_vel = min(vel * (dist/30.),vel)
+	    #if dist < 0:
+#		target_vel = min(vel* (-dist/30.),vel) 
+	    if vel <1:
+		vel =0
 	    wp.twist.twist.linear.x =vel 
 	    waypoints.append(wp)
 	return waypoints
