@@ -33,7 +33,7 @@ class Controller(object):
 	    #int_err = 0
 	if dbw: 
 	    accel_target =self.pid.step(error,sample_time ) 
-	    #int_err = self.pid.error() #to determine best values for kp,ki,kd
+	    
 	
 	    if accel_target >=0 :
 	        self.throttle = accel_target
@@ -41,7 +41,6 @@ class Controller(object):
 	    else:
 	        self.throttle = 0.0
 		self.brake = -accel_target*vehicle_mass*wheel_radius
-	#else:
-	   #int_err = 0    
+	   
         return self.throttle, self.brake, self.steer
  

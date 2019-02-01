@@ -57,7 +57,7 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         self.base_waypoints = waypoints
 	if not self.max_vel:
-	    self.max_vel = self.get_waypoint_velocity(self.base_waypoints.waypoints[0]) # do I use this anywhere?
+	    self.max_vel = self.get_waypoint_velocity(self.base_waypoints.waypoints[0]) 
 	self.num_waypoints = len(waypoints.waypoints)
 	if not self.waypoints_2d:
 	    self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]	   
@@ -86,18 +86,19 @@ class WaypointUpdater(object):
 #	if there is no red light ahead just use the base_waypoints
 	    lane.waypoints = base_waypoints
 	else:
+	# else slowly decrease velocity to stop
 	    lane.waypoints = self.decrease_vel(base_waypoints,next_idx)
 	return lane
 
     def decrease_vel(self,lane_waypoints,next_idx): 
-	vel = self.max_vel #necessary?
+	vel = self.max_vel 
 	waypoints = []
 	stop_idx = max(self.red_light_waypoint-next_idx-2,0)
 	for i in range(LOOKAHEAD_WPS):
 	    wp = Waypoint()
 	    wp.pose = self.base_waypoints.waypoints[next_idx + i].pose
 	    dist = self.distance(lane_waypoints,i,stop_idx) 
-	    vel = min(math.sqrt( 2*MAX_DECEl* dist),self.max_vel)#use different formula to improve?
+	    vel = min(math.sqrt( 2*MAX_DECEl* dist),self.max_vel) #use different formula to improve?
 	    if vel <1:
 		vel =0
 	    wp.twist.twist.linear.x =vel 

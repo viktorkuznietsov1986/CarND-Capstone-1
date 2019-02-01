@@ -71,7 +71,7 @@ class DBWNode(object):
 
     def loop(self, vehicle_mass, wheel_radius):
         rate = rospy.Rate(50) # 50Hz
-	#error = 0 #to determine best values for pid control parameters...
+	
         while not rospy.is_shutdown():
             # TODO: Get predicted throttle, brake, and steering using `twist_controller`
             # You should only publish the control commands if dbw is enabled
@@ -90,7 +90,7 @@ class DBWNode(object):
 		
             	self.publish(throttle, brake, steering)
             rate.sleep()
-	#rospy.logerr(error)
+	
     def twist_cb(self,msg):
 	self.twist = msg 
 
