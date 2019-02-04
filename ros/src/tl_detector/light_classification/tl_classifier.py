@@ -17,7 +17,7 @@ class TLClassifier(object):
                 serialized_graph = fid.read()
                 od_graph_def.ParseFromString(serialized_graph)
                 tf.import_graph_def(od_graph_def, name='')
-        #pass
+        
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -42,10 +42,10 @@ class TLClassifier(object):
                 (boxes, scores, classes, num) = sess.run(
                 [detect_boxes, detect_scores, detect_classes, num_detections],
                 feed_dict={image_tensor: image_expanded})
-                #rospy.logerr(classes)
+                
                 
         return self.transform_idx(classes[0][0])
-    	#pass
+    	
     
     def transform_idx(self,idx):
         if idx==1:

@@ -29,8 +29,8 @@ class Controller(object):
 	error = lin_vel- curr_vel 
 	if lin_vel == 0 and curr_vel ==0:
 	    self.throttle = 0
-	    self.brake = 700 #prevent rolling forward - different way of implementation might be necessary... 
-	    #int_err = 0
+	    self.brake = 700 #prevent rolling forward 
+	    
 	if dbw: 
 	    accel_target =self.pid.step(error,sample_time ) 
 	    

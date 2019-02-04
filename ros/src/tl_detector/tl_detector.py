@@ -78,7 +78,7 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         self.count +=1
-        if self.count ==self.process_nth_image: #possibility to only process only every nth image for faster processing
+        if self.count ==self.process_nth_image: #possibility to only process every nth image for faster processing
             self.count =0
             light_wp, state = self.process_traffic_lights()
             if self.state != state:
@@ -126,7 +126,7 @@ class TLDetector(object):
 
         #Get classification
         return self.light_classifier.get_classification(cv_image)
-	#return light.state
+	
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
