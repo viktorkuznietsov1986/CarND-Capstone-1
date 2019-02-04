@@ -4,21 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 import rospy
-import os
-import sys
-import cv2
-from glob import glob
-from PIL import Image
-#import numpy as np
-#import tensorflow as tf
-#import matplotlib.pyplot as plt
-#from collections import defaultdict
-#rom utils import label_map_util
-#from utils import visualization_utils as vis_util
-#import randomimport os
-#import sys
-#from glob import glob
-#from PIL import Image
+
 
 
 class TLClassifier(object):
@@ -56,7 +42,7 @@ class TLClassifier(object):
                 (boxes, scores, classes, num) = sess.run(
                 [detect_boxes, detect_scores, detect_classes, num_detections],
                 feed_dict={image_tensor: image_expanded})
-                rospy.logerr(classes)
+                #rospy.logerr(classes)
                 
         return self.transform_idx(classes[0][0])
     	#pass
