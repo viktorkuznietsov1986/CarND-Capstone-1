@@ -10,9 +10,9 @@ import rospy
 class TLClassifier(object):
     def __init__(self, is_site=False):
         if is_site:
-            self.graph = load_inference_graph(r'./frozen_inference_graph_real.pb')
+            self.graph = self.load_inference_graph(r'./frozen_inference_graph_real.pb')
         else:
-            self.graph = load_inference_graph(r'./frozen_inference_graph.pb')
+            self.graph = self.load_inference_graph(r'./frozen_inference_graph.pb')
 
     def load_inference_graph(self, path):
         graph = tf.Graph()
