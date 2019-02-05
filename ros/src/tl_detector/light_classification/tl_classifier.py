@@ -8,17 +8,22 @@ import rospy
 
 
 class TLClassifier(object):
-    def __init__(self):
-        ##TODO load classifier
-        self.graph = tf.Graph()
-        with self.graph.as_default():
+    def __init__(self, is_site=False):
+        if is_site:
+            self.graph = load_inference_graph(r'./frozen_inference_graph_real.pb')
+        else:
+            self.graph = load_inference_graph(r'./frozen_inference_graph.pb')
+
+    def load_inference_graph(self, path):
+        graph = tf.Graph()
+        with graph.as_default():
             od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(r'./frozen_inference_graph.pb', 'rb') as fid:
+            with tf.gfile.GFile(path, 'rb') as fid:
                 serialized_graph = fid.read()
                 od_graph_def.ParseFromString(serialized_graph)
                 tf.import_graph_def(od_graph_def, name='')
         
-
+        return graph
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
