@@ -13,7 +13,7 @@ import cv2
 import yaml
 import math
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -52,7 +52,7 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.count = 0
-	self.process_nth_image = 1
+	self.process_nth_image = 3
         self.state_count = 0
 
         rospy.spin()
@@ -124,9 +124,14 @@ class TLDetector(object):
             return False
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
         #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        predicted_state = self.light_classifier.get_classification(cv_image)
+        
+        print "The true state is: {}".format(light.state)
+        print "The predicted state is: {}".format(predicted_state)
+        return predicted_state
 	
 
     def process_traffic_lights(self):
