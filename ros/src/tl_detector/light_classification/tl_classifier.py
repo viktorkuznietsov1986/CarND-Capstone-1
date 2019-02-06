@@ -13,6 +13,8 @@ class TLClassifier(object):
             self.graph = self.load_inference_graph(r'./frozen_inference_graph_real.pb')
         else:
             self.graph = self.load_inference_graph(r'./frozen_inference_graph.pb')
+            
+        self.sess = tf.Session(graph=self.graph)
 
     def load_inference_graph(self, path):
         graph = tf.Graph()
@@ -38,13 +40,13 @@ class TLClassifier(object):
         np_image = self.load_image_into_numpy_array(image)
         image_expanded = np.expand_dims(np_image, axis=0)
         with self.graph.as_default():
-            with tf.Session(graph=self.graph) as sess:
-                image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
-                detect_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
-                detect_scores = self.graph.get_tensor_by_name('detection_scores:0')
-                detect_classes = self.graph.get_tensor_by_name('detection_classes:0')
-                num_detections = self.graph.get_tensor_by_name('num_detections:0')
-                (boxes, scores, classes, num) = sess.run(
+            #with tf.Session(graph=self.graph) as sess:
+            image_tensor = self.graph.get_tensor_by_name('image_tensor:0')
+            detect_boxes = self.graph.get_tensor_by_name('detection_boxes:0')
+            detect_scores = self.graph.get_tensor_by_name('detection_scores:0')
+            detect_classes = self.graph.get_tensor_by_name('detection_classes:0')
+            num_detections = self.graph.get_tensor_by_name('num_detections:0')
+            (boxes, scores, classes, num) = self.sess.run(
                 [detect_boxes, detect_scores, detect_classes, num_detections],
                 feed_dict={image_tensor: image_expanded})
                 
