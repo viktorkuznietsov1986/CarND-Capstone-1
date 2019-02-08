@@ -14,10 +14,10 @@ class Controller(object):
 	self.throttle = 0.0
 	self.brake = 0.0
 	self.kp = 0.9
-	self.ki = 0.1
+	self.ki = 0.01
 	self.kd = 0.4
 	self.mn = decel_limit
-	self.mx = accel_limit
+	self.mx = .5#accel_limit
 	self.pid = PID(self.kp,self.ki,self.kd ,self.mn,self.mx)
 	self.accel =None
 	
